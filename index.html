@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นักเสี่ยงโชค พิชิตความน่าจะเป็น - เกมการเรียนรู้คณิตศาสตร์</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: #f4efe6;
+            color: #332d27;
+        }
+
+        .wood-bg {
+            background-color: #e5d3b3;
+            background-image: radial-gradient(#d1b894 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 3D Dice Styling */
+        .scene {
+            width: 100px;
+            height: 100px;
+            perspective: 600px;
+            margin: 0 auto;
+        }
+
+        .dice {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.3, 1.15);
+        }
+
+        .dice-face {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: #ffffff;
+            border: 3px solid #332d27;
+            border-radius: 16px;
+            display: grid;
+            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+            padding: 10px;
+            box-sizing: border-box;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .face-1 { transform: rotateY(0deg) translateZ(50px); }
+        .face-6 { transform: rotateY(180deg) translateZ(50px); }
+        .face-2 { transform: rotateY(-90deg) translateZ(50px); }
+        .face-5 { transform: rotateY(90deg) translateZ(50px); }
+        .face-3 { transform: rotateX(90deg) translateZ(50px); }
+        .face-4 { transform: rotateX(-90deg) translateZ(50px); }
+
+        .pip {
+            display: block;
+            background-color: #2b2b2b;
+            border-radius: 50%;
+            margin: auto;
+            width: 16px;
+            height: 16px;
+        }
+        .pip-red {
+            background-color: #e63946;
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Token Animation */
+        .token-coin {
+            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+            border: 2px solid #cc8800;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15), inset 0 2px 2px rgba(255,255,255,0.6);
+        }
+
+        /* Board track steps */
+        .track-step {
+            transition: all 0.3s ease;
+        }
+        .track-step.active {
+            transform: scale(1.15);
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="wood-bg min-h-screen pb-12 flex flex-col">
+
+    <!-- Header Navbar -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-amber-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-xl shadow-md">
+                    🎲
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-amber-900 leading-tight">นักเสี่ยงโชค พิชิตความน่าจะเป็น</h1>
+                    <p class="text-xs text-amber-700">กิจกรรมเกมคณิตศาสตร์ ระดับมัธยมศึกษา (ทอยลูกเต๋า 1 ลูก)</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="toggleDebriefingModal()" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-medium transition flex items-center gap-1.5 border border-amber-300">
+                    <i class="fa-solid fa-lightbulb text-amber-600"></i>
+                    <span>คำถามถอดบทเรียน</span>
+                </button>
+                <button onclick="toggleRulesModal()" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition flex items-center gap-1.5 border border-blue-200">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>กติกาการเล่น</span>
+                </button>
+                <button onclick="toggleSound()" id="sound-btn" class="w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center transition">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 pt-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT COLUMN: Game Dashboard & Actions (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+
+            <!-- 1. Progress Track Board (กระดานเกม) -->
+            <div class="bg-white/95 rounded-2xl p-5 border-2 border-amber-200 card-shadow">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-amber-900 flex items-center gap-2">
+                        <i class="fa-solid fa-map-location-dot text-amber-600"></i>
+                        <span>กระดานความก้าวหน้า (รอบที่ <span id="current-round-display">1</span>/5)</span>
+                    </h2>
+                    <span id="game-status-tag" class="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-semibold">
+                        พร้อมเริ่มเกม
+                    </span>
+                </div>
+
+                <!-- Track circles -->
+                <div class="relative py-4">
+                    <div class="absolute top-1/2 left-4 right-4 h-2 bg-amber-100 -translate-y-1/2 rounded-full -z-0"></div>
+                    <div id="track-progress-bar" class="absolute top-1/2 left-4 h-2 bg-amber-500 -translate-y-1/2 rounded-full -z-0 transition-all duration-500" style="width: 0%;"></div>
+
+                    <div class="flex justify-between items-center relative z-10 px-1">
+                        <!-- START -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center justify-center border-2 border-white shadow">START</div>
+                            <span class="text-[10px] text-gray-500 mt-1">เริ่มต้น</span>
+                        </div>
+                        <!-- Rounds 1 to 5 -->
+                        <div id="round-step-1" class="track-step w-9 h-9 rounded-full bg-white border-2 border-amber-400 font-bold text-amber-800 text-sm flex items-center justify-center shadow">1</div>
+                        <div id="round-step-2" class="track-step w-9 h-9 rounded-full bg-white border-2 border-amber-200 font-bold text-gray-400 text-sm flex items-center justify-center shadow">2</div>
+                        <div id="round-step-3" class="track-step w-9 h-9 rounded-full bg-white border-2 border-amber-200 font-bold text-gray-400 text-sm flex items-center justify-center shadow">3</div>
+                        <div id="round-step-4" class="track-step w-9 h-9 rounded-full bg-white border-2 border-amber-200 font-bold text-gray-400 text-sm flex items-center justify-center shadow">4</div>
+                        <div id="round-step-5" class="track-step w-9 h-9 rounded-full bg-white border-2 border-amber-200 font-bold text-gray-400 text-sm flex items-center justify-center shadow">5</div>
+                        <!-- FINISH -->
+                        <div class="flex flex-col items-center">
+                            <div class="w-10 h-10 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center border-2 border-white shadow">FINISH</div>
+                            <span class="text-[10px] text-gray-500 mt-1">จบเกม</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Player Selection & Token Score Bar -->
+            <div class="bg-white/95 rounded-2xl p-5 border-2 border-amber-200 card-shadow flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <label class="text-sm font-medium text-gray-700">เลือกกลุ่ม/ผู้เล่น:</label>
+                    <select id="player-select" onchange="switchPlayer(this.value)" class="bg-amber-50 border border-amber-300 font-semibold text-amber-900 text-sm rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="1">กลุ่มที่ 1 (เสี่ยงโชค A)</option>
+                        <option value="2">กลุ่มที่ 2 (เสี่ยงโชค B)</option>
+                        <option value="3">กลุ่มที่ 3 (เสี่ยงโชค C)</option>
+                        <option value="4">กลุ่มที่ 4 (เสี่ยงโชค D)</option>
+                    </select>
+                </div>
+
+                <!-- Token Balance Counter -->
+                <div class="flex items-center gap-3 bg-amber-50 px-4 py-2 rounded-xl border border-amber-200">
+                    <div class="w-8 h-8 rounded-full token-coin flex items-center justify-center text-amber-900 font-bold text-xs shadow-sm">
+                        🪙
+                    </div>
+                    <div>
+                        <div class="text-[11px] text-amber-700 font-medium leading-none">คะแนนเหรียญสะสม</div>
+                        <div class="text-xl font-extrabold text-amber-900 leading-tight">
+                            <span id="player-score">10</span> <span class="text-xs font-normal text-gray-500">เหรียญ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Event Cards Deck (บัตรเหตุการณ์ A, B, C, D) -->
+            <div class="bg-white/95 rounded-2xl p-5 border-2 border-amber-200 card-shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-amber-900 flex items-center gap-2">
+                        <i class="fa-solid fa-cards text-amber-600"></i>
+                        <span>ขั้นตอนที่ 1: เลือกบัตรเหตุการณ์ที่คุณต้องการเสี่ยงโชค</span>
+                    </h2>
+                    <span class="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                        เสีย 1 เหรียญ หากทอยไม่สำเร็จ
+                    </span>
+                </div>
+
+                <!-- Cards Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <!-- Card A -->
+                    <div onclick="selectCard('A')" id="card-A" class="event-card cursor-pointer bg-purple-50 hover:bg-purple-100 border-2 border-purple-300 rounded-xl p-3 flex flex-col items-center text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md relative">
+                        <span class="w-7 h-7 rounded-full bg-purple-600 text-white font-bold text-sm flex items-center justify-center mb-1">A</span>
+                        <h3 class="text-xs font-bold text-purple-900 mb-1">ทอยได้เลขคู่</h3>
+                        <div class="flex gap-1 my-2">
+                            <span class="w-4 h-4 rounded bg-purple-200 text-[10px] flex items-center justify-center">2</span>
+                            <span class="w-4 h-4 rounded bg-purple-200 text-[10px] flex items-center justify-center">4</span>
+                            <span class="w-4 h-4 rounded bg-purple-200 text-[10px] flex items-center justify-center">6</span>
+                        </div>
+                        <div class="text-[11px] text-purple-700 font-medium">P(E) = 3/6 = 1/2</div>
+                        <div class="mt-2 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">+2 คะแนน</div>
+                    </div>
+
+                    <!-- Card B -->
+                    <div onclick="selectCard('B')" id="card-B" class="event-card cursor-pointer bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-xl p-3 flex flex-col items-center text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md relative">
+                        <span class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center mb-1">B</span>
+                        <h3 class="text-xs font-bold text-blue-900 mb-1">ทอยได้เลขมากกว่า 4</h3>
+                        <div class="flex gap-1 my-2">
+                            <span class="w-4 h-4 rounded bg-blue-200 text-[10px] flex items-center justify-center">5</span>
+                            <span class="w-4 h-4 rounded bg-blue-200 text-[10px] flex items-center justify-center">6</span>
+                        </div>
+                        <div class="text-[11px] text-blue-700 font-medium">P(E) = 2/6 = 1/3</div>
+                        <div class="mt-2 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">+3 คะแนน</div>
+                    </div>
+
+                    <!-- Card C -->
+                    <div onclick="selectCard('C')" id="card-C" class="event-card cursor-pointer bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 rounded-xl p-3 flex flex-col items-center text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md relative">
+                        <span class="w-7 h-7 rounded-full bg-rose-600 text-white font-bold text-sm flex items-center justify-center mb-1">C</span>
+                        <h3 class="text-xs font-bold text-rose-900 mb-1">ทอยได้เลข 6</h3>
+                        <div class="flex gap-1 my-2">
+                            <span class="w-4 h-4 rounded bg-rose-200 text-[10px] flex items-center justify-center">6</span>
+                        </div>
+                        <div class="text-[11px] text-rose-700 font-medium">P(E) = 1/6</div>
+                        <div class="mt-2 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">+6 คะแนน</div>
+                    </div>
+
+                    <!-- Card D -->
+                    <div onclick="selectCard('D')" id="card-D" class="event-card cursor-pointer bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-300 rounded-xl p-3 flex flex-col items-center text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-md relative">
+                        <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center mb-1">D</span>
+                        <h3 class="text-xs font-bold text-emerald-900 mb-1">ทอยได้เลขน้อยกว่า 5</h3>
+                        <div class="flex gap-1 my-2">
+                            <span class="w-4 h-4 rounded bg-emerald-200 text-[10px] flex items-center justify-center">1</span>
+                            <span class="w-4 h-4 rounded bg-emerald-200 text-[10px] flex items-center justify-center">2</span>
+                            <span class="w-4 h-4 rounded bg-emerald-200 text-[10px] flex items-center justify-center">3</span>
+                            <span class="w-4 h-4 rounded bg-emerald-200 text-[10px] flex items-center justify-center">4</span>
+                        </div>
+                        <div class="text-[11px] text-emerald-700 font-medium">P(E) = 4/6 = 2/3</div>
+                        <div class="mt-2 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">+1 คะแนน</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Dice Arena & Roll Controls -->
+            <div class="bg-white/95 rounded-2xl p-6 border-2 border-amber-200 card-shadow flex flex-col items-center text-center">
+                <h2 class="font-bold text-amber-900 text-sm mb-2">ขั้นตอนที่ 2: คำนวณและทอยลูกเต๋า 1 ครั้ง</h2>
+
+                <!-- Math Breakdown Box -->
+                <div id="math-breakdown" class="w-full bg-amber-50/80 rounded-xl p-3 border border-amber-200 mb-6 text-xs text-amber-900 transition-all">
+                    <p class="text-gray-500">กรุณาคลิกเลือกบัตรเหตุการณ์ด้านบนเพื่อแสดงคำนวณ $P(E) = n(E) / n(S)$</p>
+                </div>
+
+                <!-- 3D Interactive Dice Container -->
+                <div class="scene my-2">
+                    <div id="dice-cube" class="dice">
+                        <!-- Face 1 -->
+                        <div class="dice-face face-1">
+                            <div></div><div></div><div></div>
+                            <div></div><span class="pip pip-red"></span><div></div>
+                            <div></div><div></div><div></div>
+                        </div>
+                        <!-- Face 2 -->
+                        <div class="dice-face face-2">
+                            <span class="pip"></span><div></div><div></div>
+                            <div></div><div></div><div></div>
+                            <div></div><div></div><span class="pip"></span>
+                        </div>
+                        <!-- Face 3 -->
+                        <div class="dice-face face-3">
+                            <span class="pip"></span><div></div><div></div>
+                            <div></div><span class="pip"></span><div></div>
+                            <div></div><div></div><span class="pip"></span>
+                        </div>
+                        <!-- Face 4 -->
+                        <div class="dice-face face-4">
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                            <div></div><div></div><div></div>
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                        </div>
+                        <!-- Face 5 -->
+                        <div class="dice-face face-5">
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                            <div></div><span class="pip"></span><div></div>
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                        </div>
+                        <!-- Face 6 -->
+                        <div class="dice-face face-6">
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                            <span class="pip"></span><div></div><span class="pip"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-3 justify-center">
+                    <button id="roll-btn" disabled onclick="rollDice()" class="px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-95 flex items-center gap-2 text-base">
+                        <i class="fa-solid fa-dice text-xl"></i>
+                        <span>ทอยลูกเต๋าเลย!</span>
+                    </button>
+
+                    <button onclick="resetCurrentGame()" class="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition text-sm">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> เริ่มใหม่
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Worksheet & Game Log (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+
+            <!-- Worksheet / Record Table (ตารางบันทึกผล) -->
+            <div class="bg-white/95 rounded-2xl p-5 border-2 border-amber-200 card-shadow flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-amber-900 flex items-center gap-2">
+                        <i class="fa-solid fa-table-list text-amber-600"></i>
+                        <span>ตารางบันทึกผลกิจกรรม</span>
+                    </h2>
+                    <button onclick="clearWorksheet()" class="text-xs text-rose-600 hover:underline">
+                        ล้างข้อมูล
+                    </button>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto custom-scrollbar flex-1 border border-gray-200 rounded-xl">
+                    <table class="w-full text-xs text-left text-gray-700">
+                        <thead class="text-[11px] text-amber-900 uppercase bg-amber-100 border-b border-amber-200">
+                            <tr>
+                                <th class="px-2 py-2 text-center">รอบ</th>
+                                <th class="px-2 py-2">บัตร</th>
+                                <th class="px-2 py-2 text-center">P(E)</th>
+                                <th class="px-2 py-2 text-center">ผลทอย</th>
+                                <th class="px-2 py-2 text-center">ผลได้/เสีย</th>
+                                <th class="px-2 py-2 text-center">รวม</th>
+                            </tr>
+                        </thead>
+                        <tbody id="worksheet-table-body">
+                            <!-- Rows generated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mathematical Summary Card -->
+                <div class="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
+                    <div class="font-bold mb-1 flex items-center gap-1">
+                        <i class="fa-solid fa-square-root-variable text-amber-600"></i>
+                        <span>องค์ความรู้เรื่องความน่าจะเป็น:</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-[11px] text-amber-800">
+                        <li><strong>Sample Space ($S$):</strong> $\{1, 2, 3, 4, 5, 6\}$ ดังนั้น $n(S) = 6$</li>
+                        <li><strong>ความน่าจะเป็น $P(E)$:</strong> $P(E) = \frac{n(E)}{n(S)}$</li>
+                        <li>ความน่าจะเป็นช่วยบอก <i>แนวโน้มโอกาส</i> ไม่ใช่การการันตีผลจริง</li>
+                    </ul>
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <button onclick="exportWorksheet()" class="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs rounded-xl border border-emerald-200 transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-print"></i> พิมพ์ / บันทึกใบกิจกรรม
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL: Rules & Instructions -->
+    <div id="rules-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border-2 border-amber-200 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
+                <h3 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-amber-500"></i>
+                    กติกาเกม "นักเสี่ยงโชคพิชิตความน่าจะเป็น"
+                </h3>
+                <button onclick="toggleRulesModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs text-gray-700 leading-relaxed">
+                <p><strong>วัตถุประสงค์:</strong> ให้นักเรียนฝึกระบุ Sample Space, Event และคำนวณความน่าจะเป็น $P(E) = n(E)/n(S)$ เพื่อนำไปประเมินความเสี่ยงและวางแผนการตัดสินใจ</p>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <h4 class="font-bold text-amber-900 mb-1">ขั้นตอนการเล่น (เล่นทั้งหมด 5 รอบ):</h4>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li><strong>เหรียญเริ่มต้น:</strong> แต่ละกลุ่ม/ผู้เล่น ได้รับ 10 เหรียญ</li>
+                        <li><strong>เลือกบัตร:</strong> ในแต่ละรอบ เลือกบัตรเหตุการณ์ A, B, C หรือ D</li>
+                        <li><strong>คำนวณ:</strong> เขียนระบุ $E, n(E), n(S)$ และ $P(E)$ ลงในใบบันทึกผล</li>
+                        <li><strong>ทอยลูกเต๋า:</strong> ทอยลูกเต๋ามาตรฐาน 1 ลูก</li>
+                        <li><strong>สรุปผล:</strong>
+                            <ul class="list-disc list-inside ml-4 text-emerald-700">
+                                <li>หากทอยได้ตรงตามบัตร: ได้รับเหรียญรางวัลตามที่ระบุบนบัตร</li>
+                                <li class="text-rose-600">หากทอยไม่ตรง: เสีย 1 เหรียญ</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <table class="w-full text-center border-collapse border border-gray-200 mt-2">
+                    <thead>
+                        <tr class="bg-amber-100 text-amber-900 font-bold">
+                            <th class="border border-gray-200 p-1">บัตร</th>
+                            <th class="border border-gray-200 p-1">เหตุการณ์</th>
+                            <th class="border border-gray-200 p-1">P(E)</th>
+                            <th class="border border-gray-200 p-1">รางวัล</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="border p-1 font-bold">A</td><td class="border p-1">เลขคู่ {2,4,6}</td><td class="border p-1">3/6 = 1/2</td><td class="border p-1 text-emerald-600 font-bold">+2</td></tr>
+                        <tr><td class="border p-1 font-bold">B</td><td class="border p-1">มากกว่า 4 {5,6}</td><td class="border p-1">2/6 = 1/3</td><td class="border p-1 text-emerald-600 font-bold">+3</td></tr>
+                        <tr><td class="border p-1 font-bold">C</td><td class="border p-1">เลข 6 {6}</td><td class="border p-1">1/6</td><td class="border p-1 text-emerald-600 font-bold">+6</td></tr>
+                        <tr><td class="border p-1 font-bold">D</td><td class="border p-1">น้อยกว่า 5 {1,2,3,4}</td><td class="border p-1">4/6 = 2/3</td><td class="border p-1 text-emerald-600 font-bold">+1</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button onclick="toggleRulesModal()" class="w-full mt-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition">
+                เข้าใจแล้ว เริ่มเล่นกันเลย
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Teacher Debriefing Questions -->
+    <div id="debrief-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border-2 border-amber-200 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-100 mb-4">
+                <h3 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-amber-500"></i>
+                    ช่วงถอดบทเรียน (Debriefing) สำหรับครูผู้สอน
+                </h3>
+                <button onclick="toggleDebriefingModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs text-gray-700">
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <p class="font-bold text-amber-900 mb-1">1. ปริภูมิของตัวอย่าง (Sample Space) ในการทอยลูกเต๋าคืออะไร?</p>
+                    <p class="text-gray-600">คำตอบแนวทาง: $S = \{1, 2, 3, 4, 5, 6\}$ มีจำนวนผลลัพธ์ $n(S) = 6$</p>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <p class="font-bold text-amber-900 mb-1">2. บัตรใดมีความน่าจะเป็นสูงที่สุด และบัตรใดมีรางวัลสูงสุด?</p>
+                    <p class="text-gray-600">คำตอบแนวทาง: บัตร D มีความน่าจะเป็นสูงที่สุด (2/3) แต่รางวัลน้อย (+1) ในขณะที่บัตร C มีรางวัลมากที่สุด (+6) แต่มีความน่าจะเป็นต่ำที่สุด (1/6)</p>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <p class="font-bold text-amber-900 mb-1">3. ผลการทอยจริงตรงกับความน่าจะเป็นที่คำนวณไว้เสมอไปหรือไม่?</p>
+                    <p class="text-gray-600">คำตอบแนวทาง: ไม่เสมอไป เพราะความน่าจะเป็นบอกถึง "แนวโน้มเชิงทฤษฎีระยะยาว" ไม่ใช่การการันตีผลในการทอยรายครั้ง</p>
+                </div>
+            </div>
+
+            <button onclick="toggleDebriefingModal()" class="w-full mt-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition">
+                ปิดหน้าต่าง
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const CARDS_DATA = {
+            'A': { title: 'ทอยได้เลขคู่', outcomes: [2, 4, 6], reward: 2, probStr: '3/6 = 1/2', probVal: 3/6, setStr: '{2, 4, 6}' },
+            'B': { title: 'ทอยได้เลขมากกว่า 4', outcomes: [5, 6], reward: 3, probStr: '2/6 = 1/3', probVal: 2/6, setStr: '{5, 6}' },
+            'C': { title: 'ทอยได้เลข 6', outcomes: [6], reward: 6, probStr: '1/6', probVal: 1/6, setStr: '{6}' },
+            'D': { title: 'ทอยได้เลขน้อยกว่า 5', outcomes: [1, 2, 3, 4], reward: 1, probStr: '4/6 = 2/3', probVal: 4/6, setStr: '{1, 2, 3, 4}' }
+        };
+
+        let gameState = {
+            currentPlayer: 1,
+            players: {
+                1: { score: 10, round: 1, history: [] },
+                2: { score: 10, round: 1, history: [] },
+                3: { score: 10, round: 1, history: [] },
+                4: { score: 10, round: 1, history: [] }
+            },
+            selectedCardKey: null,
+            isRolling: false,
+            soundEnabled: true
+        };
+
+        // Web Audio API Sound Generator
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'roll') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.1);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2); // G5
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.4);
+                } else if (type === 'lose') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(150, ctx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.25);
+                }
+            } catch (e) {
+                console.log('Audio error', e);
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const btn = document.getElementById('sound-btn');
+            btn.innerHTML = gameState.soundEnabled ? 
+                '<i class="fa-solid fa-volume-high"></i>' : 
+                '<i class="fa-solid fa-volume-xmark text-rose-500"></i>';
+        }
+
+        function selectCard(cardKey) {
+            if (gameState.isRolling) return;
+
+            const playerData = gameState.players[gameState.currentPlayer];
+            if (playerData.round > 5) {
+                alert('กลุ่มนี้เล่นครบ 5 รอบเรียบร้อยแล้ว!');
+                return;
+            }
+
+            gameState.selectedCardKey = cardKey;
+
+            // Update UI card borders
+            document.querySelectorAll('.event-card').forEach(el => {
+                el.classList.remove('ring-4', 'ring-amber-500', 'scale-105');
+            });
+            const selectedEl = document.getElementById(`card-${cardKey}`);
+            if (selectedEl) {
+                selectedEl.classList.add('ring-4', 'ring-amber-500', 'scale-105');
+            }
+
+            // Enable Roll Button
+            document.getElementById('roll-btn').disabled = false;
+
+            // Render Math Breakdown Box
+            const card = CARDS_DATA[cardKey];
+            const mathBox = document.getElementById('math-breakdown');
+            mathBox.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between gap-2 font-semibold text-amber-900 border-b border-amber-200 pb-1.5 mb-1.5">
+                    <span>วิเคราะห์เหตุการณ์ (${cardKey}): ${card.title}</span>
+                    <span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">รางวัล +${card.reward} เหรียญ</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-amber-800">
+                    <div>• ปริภูมิของตัวอย่าง $S = \\{1, 2, 3, 4, 5, 6\\} \\rightarrow n(S) = 6$</div>
+                    <div>• เหตุการณ์ $E = ${card.setStr} \\rightarrow n(E) = ${card.outcomes.length}$</div>
+                </div>
+                <div class="mt-1.5 pt-1 border-t border-amber-200 font-bold text-amber-900 flex justify-between">
+                    <span>สูตรความน่าจะเป็น $P(E) = n(E) / n(S)$:</span>
+                    <span class="text-amber-700">${card.probStr}</span>
+                </div>
+            `;
+        }
+
+        function rollDice() {
+            if (!gameState.selectedCardKey || gameState.isRolling) return;
+
+            const playerData = gameState.players[gameState.currentPlayer];
+            if (playerData.round > 5) return;
+
+            gameState.isRolling = true;
+            document.getElementById('roll-btn').disabled = true;
+
+            // Play rolling sound repeats
+            let soundInterval = setInterval(() => playSound('roll'), 120);
+
+            // Determine dice outcome (1-6)
+            const result = Math.floor(Math.random() * 6) + 1;
+
+            // 3D Rotation Calculation
+            const dice = document.getElementById('dice-cube');
+            
+            // Map face rotations
+            const faceRotations = {
+                1: { x: 0, y: 0 },
+                6: { x: 0, y: 180 },
+                2: { x: 0, y: 90 },
+                5: { x: 0, y: -90 },
+                3: { x: -90, y: 0 },
+                4: { x: 90, y: 0 }
+            };
+
+            const targetRot = faceRotations[result];
+            // Add extra full 360 spins for animation effect
+            const extraSpinsX = (Math.floor(Math.random() * 2) + 3) * 360;
+            const extraSpinsY = (Math.floor(Math.random() * 2) + 3) * 360;
+
+            dice.style.transform = `rotateX(${targetRot.x + extraSpinsX}deg) rotateY(${targetRot.y + extraSpinsY}deg)`;
+
+            setTimeout(() => {
+                clearInterval(soundInterval);
+                gameState.isRolling = false;
+                processRollResult(result);
+            }, 1500);
+        }
+
+        function processRollResult(diceResult) {
+            const cardKey = gameState.selectedCardKey;
+            const card = CARDS_DATA[cardKey];
+            const isSuccess = card.outcomes.includes(diceResult);
+            const playerData = gameState.players[gameState.currentPlayer];
+
+            let scoreChange = isSuccess ? card.reward : -1;
+            playerData.score += scoreChange;
+
+            // Play win/lose sound
+            playSound(isSuccess ? 'win' : 'lose');
+
+            if (isSuccess && typeof confetti === 'function') {
+                confetti({
+                    particleCount: 40,
+                    spread: 60,
+                    origin: { y: 0.7 }
+                });
+            }
+
+            // Save to history
+            playerData.history.push({
+                round: playerData.round,
+                cardKey: cardKey,
+                probStr: card.probStr,
+                diceResult: diceResult,
+                scoreChange: scoreChange,
+                totalScore: playerData.score
+            });
+
+            playerData.round += 1;
+
+            // Reset selected card
+            gameState.selectedCardKey = null;
+            document.querySelectorAll('.event-card').forEach(el => {
+                el.classList.remove('ring-4', 'ring-amber-500', 'scale-105');
+            });
+
+            // Update UI displays
+            updatePlayerUI();
+            renderWorksheetTable();
+
+            // Check if game complete
+            if (playerData.round > 5) {
+                setTimeout(() => {
+                    alert(`🎉 กลุ่มที่ ${gameState.currentPlayer} เล่นครบ 5 รอบแล้ว! คะแนนรวมสุทธิ: ${playerData.score} เหรียญ`);
+                }, 300);
+            }
+        }
+
+        function switchPlayer(playerNum) {
+            gameState.currentPlayer = parseInt(playerNum);
+            gameState.selectedCardKey = null;
+
+            document.querySelectorAll('.event-card').forEach(el => {
+                el.classList.remove('ring-4', 'ring-amber-500', 'scale-105');
+            });
+            document.getElementById('roll-btn').disabled = true;
+            document.getElementById('math-breakdown').innerHTML = `
+                <p class="text-gray-500">กรุณาคลิกเลือกบัตรเหตุการณ์ด้านบนเพื่อแสดงคำนวณ $P(E) = n(E) / n(S)$</p>
+            `;
+
+            updatePlayerUI();
+            renderWorksheetTable();
+        }
+
+        function updatePlayerUI() {
+            const playerData = gameState.players[gameState.currentPlayer];
+
+            // Score Display
+            document.getElementById('player-score').innerText = playerData.score;
+
+            // Round Display
+            const currentRound = Math.min(playerData.round, 5);
+            document.getElementById('current-round-display').innerText = playerData.round > 5 ? '5 (เสร็จสิ้น)' : currentRound;
+
+            // Status tag
+            const statusTag = document.getElementById('game-status-tag');
+            if (playerData.round > 5) {
+                statusTag.innerText = 'จบการแข่งขัน';
+                statusTag.className = 'text-xs px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full font-semibold';
+            } else {
+                statusTag.innerText = `รอบที่ ${currentRound}`;
+                statusTag.className = 'text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-semibold';
+            }
+
+            // Track Step active highlighting
+            for (let i = 1; i <= 5; i++) {
+                const stepEl = document.getElementById(`round-step-${i}`);
+                if (i < playerData.round) {
+                    stepEl.className = 'track-step w-9 h-9 rounded-full bg-emerald-500 text-white font-bold text-sm flex items-center justify-center shadow';
+                    stepEl.innerHTML = '✓';
+                } else if (i === playerData.round && playerData.round <= 5) {
+                    stepEl.className = 'track-step active w-9 h-9 rounded-full bg-amber-500 text-white font-bold text-sm flex items-center justify-center shadow';
+                    stepEl.innerHTML = i;
+                } else {
+                    stepEl.className = 'track-step w-9 h-9 rounded-full bg-white border-2 border-amber-200 font-bold text-gray-400 text-sm flex items-center justify-center shadow';
+                    stepEl.innerHTML = i;
+                }
+            }
+
+            // Progress bar length
+            const percent = Math.min(((playerData.round - 1) / 5) * 100, 100);
+            document.getElementById('track-progress-bar').style.width = `${percent}%`;
+        }
+
+        function renderWorksheetTable() {
+            const playerData = gameState.players[gameState.currentPlayer];
+            const tbody = document.getElementById('worksheet-table-body');
+            tbody.innerHTML = '';
+
+            if (playerData.history.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-3 py-6 text-center text-gray-400 italic">
+                            ยังไม่มีข้อมูล ให้เลือกบัตรและทอยลูกเต๋าเพื่อบันทึกผล
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            playerData.history.forEach((row) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 hover:bg-amber-50/50 transition';
+
+                const changeClass = row.scoreChange > 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold';
+                const changeTxt = row.scoreChange > 0 ? `+${row.scoreChange}` : `${row.scoreChange}`;
+
+                tr.innerHTML = `
+                    <td class="px-2 py-2 text-center font-bold text-gray-600">${row.round}</td>
+                    <td class="px-2 py-2 font-semibold">บัตร ${row.cardKey}</td>
+                    <td class="px-2 py-2 text-center text-gray-600">${row.probStr}</td>
+                    <td class="px-2 py-2 text-center"><span class="px-2 py-0.5 bg-gray-100 font-bold rounded">${row.diceResult}</span></td>
+                    <td class="px-2 py-2 text-center ${changeClass}">${changeTxt}</td>
+                    <td class="px-2 py-2 text-center font-bold text-amber-900">${row.totalScore}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function clearWorksheet() {
+            if (confirm('คุณต้องการล้างข้อมูลบันทึกของกลุ่มนี้หรือไม่?')) {
+                gameState.players[gameState.currentPlayer] = { score: 10, round: 1, history: [] };
+                gameState.selectedCardKey = null;
+                updatePlayerUI();
+                renderWorksheetTable();
+            }
+        }
+
+        function resetCurrentGame() {
+            if (confirm('คุณต้องการรีเซ็ตเกมของทุกกลุ่มกลับสู่ค่าเริ่มต้นใช่หรือไม่?')) {
+                gameState.players = {
+                    1: { score: 10, round: 1, history: [] },
+                    2: { score: 10, round: 1, history: [] },
+                    3: { score: 10, round: 1, history: [] },
+                    4: { score: 10, round: 1, history: [] }
+                };
+                gameState.selectedCardKey = null;
+                updatePlayerUI();
+                renderWorksheetTable();
+            }
+        }
+
+        function exportWorksheet() {
+            window.print();
+        }
+
+        function toggleRulesModal() {
+            document.getElementById('rules-modal').classList.toggle('hidden');
+        }
+
+        function toggleDebriefingModal() {
+            document.getElementById('debrief-modal').classList.toggle('hidden');
+        }
+
+        // Initialize App on Load
+        window.onload = function() {
+            updatePlayerUI();
+            renderWorksheetTable();
+        };
+    </script>
+</body>
+</html>
